@@ -431,7 +431,7 @@ func cmdCreate(c *cli.Context) {
 	userShell := filepath.Base(os.Getenv("SHELL"))
 
 	switch userShell {
-	case "fish":
+	case "fish", "csh", "tcsh":
 		info = fmt.Sprintf("%s env %s | source", c.App.Name, name)
 	default:
 		info = fmt.Sprintf(`eval "$(%s env %s)"`, c.App.Name, name)
@@ -662,6 +662,8 @@ func cmdEnv(c *cli.Context) {
 		switch userShell {
 		case "fish":
 			fmt.Printf("set -e DOCKER_TLS_VERIFY;\nset -e DOCKER_CERT_PATH;\nset -e DOCKER_HOST;\n")
+		case "csh", "tcsh":
+			fmt.Printf("unsetenv DOCKER_TLS_VERIFY;\nunsetenv DOCKER_CERT_PATH;\nunsetenv DOCKER_HOST;\n")
 		default:
 			fmt.Println("unset DOCKER_TLS_VERIFY DOCKER_CERT_PATH DOCKER_HOST")
 		}
@@ -725,6 +727,9 @@ func cmdEnv(c *cli.Context) {
 	switch userShell {
 	case "fish":
 		fmt.Printf("set -x DOCKER_TLS_VERIFY 1;\nset -x DOCKER_CERT_PATH %q;\nset -x DOCKER_HOST %s;\n",
+			cfg.machineDir, dockerHost)
+	case "csh", "tcsh":
+		fmt.Printf("setenv DOCKER_TLS_VERIFY 1;\nsetenv DOCKER_CERT_PATH %q;\nsetenv DOCKER_HOST %s;\n",
 			cfg.machineDir, dockerHost)
 	default:
 		fmt.Printf("export DOCKER_TLS_VERIFY=1\nexport DOCKER_CERT_PATH=%q\nexport DOCKER_HOST=%s\n",
