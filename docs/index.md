@@ -10,9 +10,9 @@ page_keywords: docker, machine, amazonec2, azure, digitalocean, google, openstac
 > **Note**: Machine is currently in beta, so things are likely to change. We
 > don't recommend you use it in production yet.
 
-Machine makes it really easy to create Docker hosts on your computer, on cloud
-providers and inside your own data center. It creates servers, installs Docker
-on them, then configures the Docker client to talk to them.
+Machine lets you create Docker hosts on your computer, on cloud providers, and
+inside your own data center. It creates servers, installs Docker on them, then
+configures the Docker client to talk to them.
 
 Once your Docker host has been created, it then has a number of commands for
 managing them:
@@ -21,33 +21,100 @@ managing them:
  - Upgrading Docker
  - Configuring the Docker client to talk to your host
 
+## Getting help
+
+Docker Machine is still in its infancy and under active development. If you need
+help, would like to contribute, or simply want to talk about to the project with
+like-minded individuals, we have a number of open channels for communication.
+
+- To report bugs or file feature requests: please use the [issue tracker on
+  Github](https://github.com/docker/machine/issues).
+- To talk about the project with people in real time: please join the
+  `#docker-machine` channel on IRC.
+- To contribute code or documentation changes: please [submit a pull request on
+  Github](https://github.com/docker/machine/pulls).
+
+For more information and resources, please visit
+[https://docs.docker.com/project/get-help/](https://docs.docker.com/project/get-help/).
+
 ## Installation
 
-Docker Machine is supported on Windows, OSX, and Linux.  To install Docker
-Machine, download the appropriate binary for your OS and architecture to the
-correct place in your `PATH`:
+Docker Machine is supported on Windows, OSX, and Linux and is installable as one
+standalone binary.  The links to the binaries for the various platforms and
+architectures are below:
 
-- [Windows - x86_64](https://github.com/docker/machine/releases/download/v0.1.0/docker-machine_windows-amd64.exe)
-- [OSX - x86_64](https://github.com/docker/machine/releases/download/v0.1.0/docker-machine_darwin-amd64)
-- [Linux - x86_64](https://github.com/docker/machine/releases/download/v0.1.0/docker-machine_linux-amd64)
-- [Windows - i386](https://github.com/docker/machine/releases/download/v0.1.0/docker-machine_windows-386.exe)
-- [OSX - i386](https://github.com/docker/machine/releases/download/v0.1.0/docker-machine_darwin-386)
-- [Linux - i386](https://github.com/docker/machine/releases/download/v0.1.0/docker-machine_linux-386)
+- [Windows - 32bit](https://github.com/docker/machine/releases/download/v0.2.0/docker-machine_windows-386.exe)
+- [Windows - 64bit](https://github.com/docker/machine/releases/download/v0.2.0/docker-machine_windows-amd64.exe)
+- [OSX - x86_64](https://github.com/docker/machine/releases/download/v0.2.0/docker-machine_darwin-amd64)
+- [OSX - (old macs)](https://github.com/docker/machine/releases/download/v0.2.0/docker-machine_darwin-386)
+- [Linux - x86_64](https://github.com/docker/machine/releases/download/v0.2.0/docker-machine_linux-amd64)
+- [Linux - i386](https://github.com/docker/machine/releases/download/v0.2.0/docker-machine_linux-386)
+
+### OSX and Linux
+
+To install on OSX or Linux, download the proper binary to somewhere in your
+`PATH` (e.g. `/usr/local/bin`) and make it executable.  For instance, to install on
+most OSX machines these commands should suffice:
+
+```
+$ curl -L https://github.com/docker/machine/releases/download/v0.2.0/docker-machine_darwin-amd64 > /usr/local/bin/docker-machine
+$ chmod +x /usr/local/bin/docker-machine
+```
+
+For Linux, just substitute "linux" for "darwin" in the binary name above.
 
 Now you should be able to check the version with `docker-machine -v`:
 
 ```
 $ docker-machine -v
-machine version 0.1.0
+machine version 0.2.0
+```
+
+In order to run Docker commands on your machines without having to use SSH, make
+sure to install the Docker client as well, e.g.:
+
+```
+$ curl https://get.docker.com/builds/Darwin/x86_64/docker-latest > /usr/local/bin/docker
+```
+
+### Windows
+
+Currently, Docker recommends that you install and use Docker Machine on Windows
+with [msysgit](https://msysgit.github.io/).  This will provide you with some
+programs that Docker Machine relies on such as `ssh`, as well as a functioning
+shell.
+
+When you have installed msysgit, start up the terminal prompt and run the
+following commands.  Here it is assumed that you are on a 64-bit Windows
+installation.  If you are on a 32-bit installation, please substitute "i386" for
+"x86_64" in the URLs mentioned.
+
+First, install the Docker client binary:
+
+```
+curl https://get.docker.com/builds/Windows/x86_64/docker-latest > /bin/docker
+```
+
+Next, install the Docker Machine binary:
+
+```
+curl https://github.com/docker/machine/releases/docker-machine_windows-amd64.exe > /bin/docker-machine
+```
+
+Now running `docker-machine` should work.
+
+```
+$ docker-machine -v
+machine version 0.2.0
 ```
 
 ## Getting started with Docker Machine using a local VM
 
-Let's take a look at using `docker-machine` to creating, using, and managing a Docker
-host inside of [VirtualBox](https://www.virtualbox.org/).
+Let's take a look at using `docker-machine` for creating, using, and managing a
+Docker host inside of [VirtualBox](https://www.virtualbox.org/).
 
 First, ensure that
-[VirtualBox 4.3.20](https://www.virtualbox.org/wiki/Downloads) is correctly
+[VirtualBox 4.3.26](https://www.virtualbox.org/wiki/Downloads) is correctly
 installed on your system.
 
 If you run the `docker-machine ls` command to show all available machines, you will see
@@ -62,30 +129,20 @@ To create one, we run the `docker-machine create` command, passing the string
 `virtualbox` to the `--driver` flag.  The final argument we pass is the name of
 the machine - in this case, we will name our machine "dev".
 
-This will download a lightweight Linux distribution
+This command will download a lightweight Linux distribution
 ([boot2docker](https://github.com/boot2docker/boot2docker)) with the Docker
 daemon installed, and will create and start a VirtualBox VM with Docker running.
 
 
 ```
 $ docker-machine create --driver virtualbox dev
-INFO[0001] Downloading boot2docker.iso to /home/ehazlett/.docker/machine/cache/boot2docker.iso...
+INFO[0001] Downloading boot2docker.iso to /home/<your username>/.docker/machine/cache/boot2docker.iso...
 INFO[0011] Creating SSH key...
 INFO[0012] Creating VirtualBox VM...
 INFO[0019] Starting VirtualBox VM...
 INFO[0020] Waiting for VM to start...
 INFO[0053] "dev" has been created and is now the active machine.
 INFO[0053] To point your Docker client at it, run this in your shell: eval "$(docker-machine env dev)"
-```
-
-To use the Docker CLI, you can use the `env` command to list the commands
-needed to connect to the instance.
-
-```
-$ docker-machine env dev
-export DOCKER_TLS_VERIFY=1
-export DOCKER_CERT_PATH="/home/ehazlett/.docker/machine/machines/dev"
-export DOCKER_HOST=tcp://192.168.99.100:2376
 ```
 
 You can see the machine you have created by running the `docker-machine ls` command
@@ -109,7 +166,17 @@ $ docker ps
 ```
 
 This will set environment variables that the Docker client will read which specify
-the TLS settings. To see what will be set, run `docker-machine env dev`.
+the TLS settings. Note that you will need to do that every time you open a new tab or
+restart your machine.
+
+To see what will be set, run `docker-machine env dev`.
+
+```
+$ docker-machine env dev
+export DOCKER_TLS_VERIFY=1
+export DOCKER_CERT_PATH=/Users/<your username>/.docker/machine/machines/dev
+export DOCKER_HOST=tcp://192.168.99.100:2376
+```
 
 You can now run Docker commands on this host:
 
@@ -132,11 +199,51 @@ $ docker-machine ip
 192.168.99.100
 ```
 
-Now you can manage as many local VMs running Docker as you please- just run
-`docker-machine create` again.
+For instance, you can try running a webserver ([nginx](https://nginx.org)) in a
+container with the following command:
 
-If you are finished using a host, you can stop it with `docker stop` and start
-it again with `docker start`:
+```
+$ docker run -d -p 8000:80 nginx
+```
+
+When the image is finished pulling, you can hit the server at port 8000 on the
+IP address given to you by `docker-machine ip`.  For instance:
+
+```
+$ curl $(docker-machine ip dev):8000
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+```
+
+You can create and manage as many local VMs running Docker as you please- just
+run `docker-machine create` again.  All created machines will appear in the
+output of `docker-machine ls`.
+
+If you are finished using a host for the time being, you can stop it with
+`docker-machine stop` and later start it again with `docker-machine start`:
 
 ```
 $ docker-machine stop
@@ -155,13 +262,14 @@ $ docker-machine start dev
 
 ## Using Docker Machine with a cloud provider
 
-One of the nice things about `docker-machine` is that it provides several “drivers”
-which let you use the same interface to create hosts on many different cloud
-platforms.  This is accomplished by using the `docker-machine create` command with the
- `--driver` flag.  Here we will be demonstrating the
-[Digital Ocean](https://digitalocean.com) driver (called `digitalocean`), but
-there are drivers included for several providers including Amazon Web Services,
-Google Compute Engine, and Microsoft Azure.
+Creating a local virtual machine running Docker is useful and fun, but it is not
+the only thing Docker Machine is capable of.  Docker Machine supports several
+“drivers” which let you use the same interface to create hosts on many different
+cloud or local virtualization platforms.  This is accomplished by using the
+`docker-machine create` command with the `--driver` flag.  Here we will be
+demonstrating the [Digital Ocean](https://digitalocean.com) driver (called
+`digitalocean`), but there are drivers included for several providers including
+Amazon Web Services, Google Compute Engine, and Microsoft Azure.
 
 Usually it is required that you pass account verification credentials for these
 providers as flags to `docker-machine create`.  These flags are unique for each driver.
@@ -172,12 +280,12 @@ Let's take a look at how to do this.
 
 To generate your access token:
 
-1. Go to the Digital Ocean administrator panel and click on "Apps and API" in
-the side panel.
+1. Go to the Digital Ocean administrator console and click on "API" in the header.
 2. Click on "Generate New Token".
 3. Give the token a clever name (e.g. "machine"), make sure the "Write" checkbox
 is checked, and click on "Generate Token".
-4. Grab the big long hex string that is generated (this is your token) and store it somehwere safe.
+4. Grab the big long hex string that is generated (this is your token) and store
+it somewhere safe.
 
 Now, run `docker-machine create` with the `digitalocean` driver and pass your key to
 the `--digitalocean-access-token` flag.
@@ -196,25 +304,25 @@ INFO[0085] "staging" has been created and is now the active machine
 INFO[0085] To point your Docker client at it, run this in your shell: eval "$(docker-machine env staging)"
 ```
 
-For convenience, `docker-machine` will use sensible defaults for choosing settings such
- as the image that the VPS is based on, but they can also be overridden using
-their respective flags (e.g. `--digitalocean-image`).  This is useful if, for
-instance, you want to create a nice large instance with a lot of memory and CPUs
-(by default `docker-machine` creates a small VPS).  For a full list of the
-flags/settings available and their defaults, see the output of
+For convenience, `docker-machine` will use sensible defaults for choosing
+settings such as the image that the VPS is based on, but they can also be
+overridden using their respective flags (e.g. `--digitalocean-image`).  This is
+useful if, for instance, you want to create a nice large instance with a lot of
+memory and CPUs (by default `docker-machine` creates a small VPS).  For a full
+list of the flags/settings available and their defaults, see the output of
 `docker-machine create -h`.
 
 When the creation of a host is initiated, a unique SSH key for accessing the
 host (initially for provisioning, then directly later if the user runs the
-`docker-machine ssh` command) will be created automatically and stored in the client's
-directory in `~/.docker/machines`.  After the creation of the SSH key, Docker
-will be installed on the remote machine and the daemon will be configured to
-accept remote connections over TCP using TLS for authentication.  Once this
+`docker-machine ssh` command) will be created automatically and stored in the
+client's directory in `~/.docker/machines`.  After the creation of the SSH key,
+Docker will be installed on the remote machine and the daemon will be configured
+to accept remote connections over TCP using TLS for authentication.  Once this
 is finished, the host is ready for connection.
 
 And then from this point, the remote host behaves much like the local host we
-created in the last section. If we look at `docker-machine`, we’ll see it is now the
-active host:
+created in the last section. If we look at `docker-machine`, we’ll see it is now
+the active host:
 
 ```
 $ docker-machine active dev
@@ -313,7 +421,7 @@ docker-machine create \
 ```
 
 You now have a Swarm cluster across two nodes.
-To connect to the Swarm master, use `docker-machine env --swarm swarm-master`
+To connect to the Swarm master, use `eval $(docker-machine env --swarm swarm-master)`
 
 For example:
 
@@ -427,11 +535,16 @@ Show help text.
 
 #### ip
 
-Get the IP address of a machine.
+Get the IP address of one or more machines.
 
 ```
 $ docker-machine ip
 192.168.99.104
+$ docker-machine ip dev
+192.168.99.104
+$ docker-machine ip dev dev2
+192.168.99.104
+192.168.99.105
 ```
 
 #### kill
@@ -578,11 +691,25 @@ dev    *        virtualbox   Stopped
 
 #### upgrade
 
-Upgrade a machine to the latest version of Docker.
+Upgrade a machine to the latest version of Docker.  If the machine uses Ubuntu
+as the underlying operating system, it will upgrade the package `lxc-docker`
+(our recommended install method).  If the machine uses boot2docker, this command
+will download the latest boot2docker ISO and replace the machine's existing ISO
+with the latest.
 
 ```
 $ docker-machine upgrade dev
+INFO[0000] Stopping machine to do the upgrade...
+INFO[0005] Upgrading machine dev...
+INFO[0006] Downloading latest boot2docker release to /tmp/store/cache/boot2docker.iso...
+INFO[0008] Starting machine back up...
+INFO[0008] Waiting for VM to start...
 ```
+
+> **Note**: If you are using a custom boot2docker ISO specified using
+> `--virtualbox-boot2docker-url` or an equivalent flag, running an upgrade on
+> that machine will completely replace the specified ISO with the latest
+> "vanilla" boot2docker ISO available.
 
 #### url
 
@@ -746,20 +873,20 @@ Create machines on [Openstack](http://www.openstack.org/software/)
 
 Mandatory:
 
- - `--openstack-flavor-id`: The flavor ID to use when creating the machine
- - `--openstack-image-id`: The image ID to use when creating the machine.
+ - `--openstack-flavor-id` or `openstack-flavor-name`: Identify the flavor that will be used for the machine.
+ - `--openstack-image-id` or `openstack-image-name`: Identify the image that will be used for the machine.
 
 Options:
 
  - `--openstack-auth-url`: Keystone service base URL.
+ - `--openstack-domain-name` or `--openstack-domain-id`: Domain to use for authentication (Keystone v3 only)
  - `--openstack-username`: User identifer to authenticate with.
  - `--openstack-password`: User password. It can be omitted if the standard environment variable `OS_PASSWORD` is set.
  - `--openstack-tenant-name` or `--openstack-tenant-id`: Identify the tenant in which the machine will be created.
  - `--openstack-region`: The region to work on. Can be omitted if there is ony one region on the OpenStack.
  - `--openstack-endpoint-type`: Endpoint type can be `internalURL`, `adminURL` on `publicURL`. If is a helper for the driver
    to choose the right URL in the OpenStack service catalog. If not provided the default id `publicURL`
- - `--openstack-net-id`: The private network id the machine will be connected on. If your OpenStack project project
-   contains only one private network it will be use automatically.
+ - `--openstack-net-id` or `--openstack-net-name`: Identify the private network the machine will be connected on. If your OpenStack project project contains only one private network it will be use automatically.
  - `--openstack-sec-groups`: If security groups are available on your OpenStack you can specify a comma separated list
    to use for the machine (e.g. `secgrp001,secgrp002`).
  - `--openstack-floatingip-pool`: The IP pool that will be used to get a public IP an assign it to the machine. If there is an
@@ -767,6 +894,7 @@ Options:
    there is no IP address already allocated a new IP will be allocated and assigned to the machine.
  - `--openstack-ssh-user`: The username to use for SSH into the machine. If not provided `root` will be used.
  - `--openstack-ssh-port`: Customize the SSH port if the SSH server on the machine does not listen on the default port.
+ - `--openstack-insecure`: Explicitly allow openstack driver to perform "insecure" SSL (https) requests. The server's certificate will not be verified against any certificate authorities. This option should be used with caution.
 
 Environment variables:
 
@@ -776,6 +904,8 @@ and CLI option are provided the CLI option takes the precedence.
 | Environment variable | CLI option                  |
 |----------------------|-----------------------------|
 | `OS_AUTH_URL`        | `--openstack-auth-url`      |
+| `OS_DOMAIN_ID`       | `--openstack-domain-id`     |
+| `OS_DOMAIN_NAME`     | `--openstack-domain-name`   |
 | `OS_USERNAME`        | `--openstack-username`      |
 | `OS_PASSWORD`        | `--openstack-password`      |
 | `OS_TENANT_NAME`     | `--openstack-tenant-name`   |
@@ -805,9 +935,10 @@ variable and CLI option are provided the CLI option takes the precedence.
 | Environment variable | CLI option                  |
 |----------------------|-----------------------------|
 | `OS_USERNAME`        | `--rackspace-username`      |
-| `OS_API_KEY`         | `--rackspace-ap-key`        |
+| `OS_API_KEY`         | `--rackspace-api-key`       |
 | `OS_REGION_NAME`     | `--rackspace-region`        |
 | `OS_ENDPOINT_TYPE`   | `--rackspace-endpoint-type` |
+| `OS_FLAVOR_ID`       | `--rackspace-flavor-id`     |
 
 The Rackspace driver will use `598a4282-f14b-4e50-af4c-b3e52749d9f9` (Ubuntu 14.04 LTS) by default.
 
@@ -823,8 +954,37 @@ Options:
  - `--virtualbox-boot2docker-url`: The URL of the boot2docker image. Defaults to the latest available version.
  - `--virtualbox-disk-size`: Size of disk for the host in MB. Default: `20000`
  - `--virtualbox-memory`: Size of memory for the host in MB. Default: `1024`
+ - `--virtualbox-cpu-count`: Number of CPUs to use to create the VM. Defaults to number of available CPUs.
 
-The VirtualBox driver uses the latest boot2docker image.
+The `--virtualbox-boot2docker-url` flag takes a few different forms.  By
+default, if no value is specified for this flag, Machine will check locally for
+a boot2docker ISO.  If one is found, that will be used as the ISO for the
+created machine.  If one is not found, the latest ISO release available on
+[boot2docker/boot2docker](https://github.com/boot2docker/boot2docker) will be
+downloaded and stored locally for future use.  Note that this means you must run
+`docker-machine upgrade` deliberately on a machine if you wish to update the "cached"
+boot2docker ISO.
+
+This is the default behavior (when `--virtualbox-boot2docker-url=""`), but the
+option also supports specifying ISOs by the `http://` and `file://` protocols.
+`file://` will look at the path specified locally to locate the ISO: for
+instance, you could specify `--virtualbox-boot2docker-url
+file://$HOME/Downloads/rc.iso` to test out a release candidate ISO that you have
+downloaded already.  You could also just get an ISO straight from the Internet
+using the `http://` form.
+
+Environment variables:
+
+Here comes the list of the supported variables with the corresponding options. If both environment
+variable and CLI option are provided the CLI option takes the precedence.
+
+| Environment variable              | CLI option                        |
+|-----------------------------------|-----------------------------------|
+| `VIRTUALBOX_MEMORY_SIZE`          | `--virtualbox-memory`             |
+| `VIRTUALBOX_CPU_COUNT`            | `--virtualbox-cpu-count`          |
+| `VIRTUALBOX_DISK_SIZE`            | `--virtualbox-disk-size`          |
+| `VIRTUALBOX_BOOT2DOCKER_URL`      | `--virtualbox-boot2docker-url`    |
+
 
 #### VMware Fusion
 Creates machines locally on [VMware Fusion](http://www.vmware.com/products/fusion). Requires VMware Fusion to be installed.
@@ -879,3 +1039,20 @@ Options:
  - `--vmwarevsphere-vcenter`: IP/hostname for vCenter (or ESXi if connecting directly to a single host).
 
 The VMware vSphere driver uses the latest boot2docker image.
+
+## Release Notes
+
+### Version 0.2.0 (April 16, 2015)
+
+For complete information on this release, see the [0.2.0 Milestone project page](https://github.com/docker/machine/wiki/0.2.0-Milestone-Project-Page).
+In addition to bug fixes and refinements, this release adds the following:
+
+* Updated and refactored Driver interface For details, see
+[PR #694](https://github.com/docker/machine/pull/694).
+
+* Initial creation of an internal API, so Machine can be used as a library. For
+details, see [PR #553](https://github.com/docker/machine/issues/553).
+
+* Improvements and isolation of provisioning functionality, so Machine can
+provision and configure the Docker Engine based on OS detection. For details,
+see [PR #553](https://github.com/docker/machine/issues/553).

@@ -26,29 +26,24 @@ import (
 )
 
 const (
-	dockerConfigDir = "/var/lib/boot2docker"
-	isoFilename     = "boot2docker.iso"
+	isoFilename = "boot2docker.iso"
 )
 
 type Driver struct {
-	MachineName    string
-	SSHUser        string
-	SSHPort        int
-	Memory         int
-	DiskSize       int
-	Boot2DockerURL string
-	CaCertPath     string
-	PrivateKeyPath string
-	SwarmMaster    bool
-	SwarmHost      string
-	SwarmDiscovery string
-	storePath      string
-}
-
-type CreateFlags struct {
-	Memory         *int
-	DiskSize       *int
-	Boot2DockerURL *string
+	CPU                 int
+	MachineName         string
+	SSHUser             string
+	SSHPort             int
+	Memory              int
+	DiskSize            int
+	Boot2DockerURL      string
+	CaCertPath          string
+	PrivateKeyPath      string
+	SwarmMaster         bool
+	SwarmHost           string
+	SwarmDiscovery      string
+	storePath           string
+	Boot2DockerImportVM string
 }
 
 func init() {
@@ -63,20 +58,33 @@ func init() {
 func GetCreateFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.IntFlag{
-			Name:  "virtualbox-memory",
-			Usage: "Size of memory for host in MB",
-			Value: 1024,
+			EnvVar: "VIRTUALBOX_MEMORY_SIZE",
+			Name:   "virtualbox-memory",
+			Usage:  "Size of memory for host in MB",
+			Value:  1024,
 		},
 		cli.IntFlag{
-			Name:  "virtualbox-disk-size",
-			Usage: "Size of disk for host in MB",
-			Value: 20000,
+			EnvVar: "VIRTUALBOX_CPU_COUNT",
+			Name:   "virtualbox-cpu-count",
+			Usage:  "number of CPUs for the machine (-1 to use the number of CPUs available)",
+			Value:  -1,
+		},
+		cli.IntFlag{
+			EnvVar: "VIRTUALBOX_DISK_SIZE",
+			Name:   "virtualbox-disk-size",
+			Usage:  "Size of disk for host in MB",
+			Value:  20000,
 		},
 		cli.StringFlag{
 			EnvVar: "VIRTUALBOX_BOOT2DOCKER_URL",
 			Name:   "virtualbox-boot2docker-url",
 			Usage:  "The URL of the boot2docker image. Defaults to the latest available version",
 			Value:  "",
+		},
+		cli.StringFlag{
+			Name:  "virtualbox-import-boot2docker-vm",
+			Usage: "The name of a Boot2Docker VM to import",
+			Value: "",
 		},
 	}
 }
@@ -137,6 +145,7 @@ func (d *Driver) GetURL() (string, error) {
 }
 
 func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
+	d.CPU = flags.Int("virtualbox-cpu-count")
 	d.Memory = flags.Int("virtualbox-memory")
 	d.DiskSize = flags.Int("virtualbox-disk-size")
 	d.Boot2DockerURL = flags.String("virtualbox-boot2docker-url")
@@ -144,6 +153,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.SwarmHost = flags.String("swarm-host")
 	d.SwarmDiscovery = flags.String("swarm-discovery")
 	d.SSHUser = "docker"
+	d.Boot2DockerImportVM = flags.String("virtualbox-import-boot2docker-vm")
 
 	return nil
 }
@@ -154,8 +164,7 @@ func (d *Driver) PreCreateCheck() error {
 
 func (d *Driver) Create() error {
 	var (
-		err    error
-		isoURL string
+		err error
 	)
 
 	// Check that VBoxManage exists and works
@@ -169,53 +178,56 @@ func (d *Driver) Create() error {
 	}
 
 	b2dutils := utils.NewB2dUtils("", "")
-	imgPath := utils.GetMachineCacheDir()
-	isoFilename := "boot2docker.iso"
-	commonIsoPath := filepath.Join(imgPath, "boot2docker.iso")
-	// just in case boot2docker.iso has been manually deleted
-	if _, err := os.Stat(imgPath); os.IsNotExist(err) {
-		if err := os.Mkdir(imgPath, 0700); err != nil {
-			return err
-		}
-	}
-
-	if d.Boot2DockerURL != "" {
-		isoURL = d.Boot2DockerURL
-		log.Infof("Downloading %s from %s...", isoFilename, isoURL)
-		if err := b2dutils.DownloadISO(d.storePath, isoFilename, isoURL); err != nil {
-			return err
-		}
-	} else {
-		// todo: check latest release URL, download if it's new
-		// until then always use "latest"
-		isoURL, err = b2dutils.GetLatestBoot2DockerReleaseURL()
-		if err != nil {
-			log.Warnf("Unable to check for the latest release: %s", err)
-		}
-
-		if _, err := os.Stat(commonIsoPath); os.IsNotExist(err) {
-			log.Infof("Downloading %s to %s...", isoFilename, commonIsoPath)
-			if err := b2dutils.DownloadISO(imgPath, isoFilename, isoURL); err != nil {
-				return err
-			}
-		}
-
-		isoDest := filepath.Join(d.storePath, isoFilename)
-		if err := utils.CopyFile(commonIsoPath, isoDest); err != nil {
-			return err
-		}
-	}
-
-	log.Infof("Creating SSH key...")
-
-	if err := ssh.GenerateSSHKey(d.GetSSHKeyPath()); err != nil {
+	if err := b2dutils.CopyIsoToMachineDir(d.Boot2DockerURL, d.MachineName); err != nil {
 		return err
 	}
 
 	log.Infof("Creating VirtualBox VM...")
 
-	if err := d.generateDiskImage(d.DiskSize); err != nil {
-		return err
+	// import b2d VM if requested
+	if d.Boot2DockerImportVM != "" {
+		name := d.Boot2DockerImportVM
+
+		// make sure vm is stopped
+		_ = vbm("controlvm", name, "poweroff")
+
+		diskInfo, err := getVMDiskInfo(name)
+		if err != nil {
+			return err
+		}
+
+		if _, err := os.Stat(diskInfo.Path); err != nil {
+			return err
+		}
+
+		if err := vbm("clonehd", diskInfo.Path, d.diskPath()); err != nil {
+			return err
+		}
+
+		log.Debugf("Importing VM settings...")
+		vmInfo, err := getVMInfo(name)
+		if err != nil {
+			return err
+		}
+
+		d.CPU = vmInfo.CPUs
+		d.Memory = vmInfo.Memory
+
+		log.Debugf("Importing SSH key...")
+		keyPath := filepath.Join(utils.GetHomeDir(), ".ssh", "id_boot2docker")
+		if err := utils.CopyFile(keyPath, d.GetSSHKeyPath()); err != nil {
+			return err
+		}
+	} else {
+		log.Infof("Creating SSH key...")
+		if err := ssh.GenerateSSHKey(d.GetSSHKeyPath()); err != nil {
+			return err
+		}
+
+		log.Debugf("Creating disk image...")
+		if err := d.generateDiskImage(d.DiskSize); err != nil {
+			return err
+		}
 	}
 
 	if err := vbm("createvm",
@@ -225,7 +237,13 @@ func (d *Driver) Create() error {
 		return err
 	}
 
-	cpus := uint(runtime.NumCPU())
+	log.Debugf("VM CPUS: %d", d.CPU)
+	log.Debugf("VM Memory: %d", d.Memory)
+
+	cpus := d.CPU
+	if cpus < 1 {
+		cpus = int(runtime.NumCPU())
+	}
 	if cpus > 32 {
 		cpus = 32
 	}
@@ -371,7 +389,7 @@ func (d *Driver) Start() error {
 		if err := vbm("startvm", d.MachineName, "--type", "headless"); err != nil {
 			return err
 		}
-		log.Infof("Waiting for VM to start...")
+		log.Infof("Starting VM...")
 	case state.Paused:
 		if err := vbm("controlvm", d.MachineName, "resume", "--type", "headless"); err != nil {
 			return err
@@ -381,7 +399,7 @@ func (d *Driver) Start() error {
 		log.Infof("VM not in restartable state")
 	}
 
-	return ssh.WaitForTCP(fmt.Sprintf("localhost:%d", d.SSHPort))
+	return nil
 }
 
 func (d *Driver) Stop() error {
@@ -480,19 +498,17 @@ func (d *Driver) GetIP() (string, error) {
 	if s != state.Running {
 		return "", drivers.ErrHostIsNotRunning
 	}
-	cmd, err := drivers.GetSSHCommandFromDriver(d, "ip addr show dev eth1")
+	output, err := drivers.RunSSHCommandFromDriver(d, "ip addr show dev eth1")
 	if err != nil {
 		return "", err
 	}
 
-	// reset to nil as if using from Host Stdout is already set when using DEBUG
-	cmd.Stdout = nil
-
-	b, err := cmd.Output()
-	if err != nil {
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(output.Stdout); err != nil {
 		return "", err
 	}
-	out := string(b)
+
+	out := buf.String()
 	log.Debugf("SSH returned: %s\nEND SSH\n", out)
 	// parse to find: inet 192.168.59.103/24 brd 192.168.59.255 scope global eth1
 	lines := strings.Split(out, "\n")
@@ -625,15 +641,25 @@ func zeroFill(w io.Writer, n int64) error {
 }
 
 func getAvailableTCPPort() (int, error) {
-	// FIXME: this has a race condition between finding an available port and
-	// virtualbox using that port. Perhaps we should randomly pick an unused
-	// port in a range not used by kernel for assigning ports
-	ln, err := net.Listen("tcp4", "127.0.0.1:0")
-	if err != nil {
-		return 0, err
+	port := 0
+	for i := 0; i <= 10; i++ {
+		ln, err := net.Listen("tcp4", "127.0.0.1:0")
+		if err != nil {
+			return 0, err
+		}
+		defer ln.Close()
+		addr := ln.Addr().String()
+		addrParts := strings.SplitN(addr, ":", 2)
+		p, err := strconv.Atoi(addrParts[1])
+		if err != nil {
+			return 0, err
+		}
+		if p != 0 {
+			port = p
+			return port, nil
+		}
+		time.Sleep(1)
 	}
-	defer ln.Close()
-	addr := ln.Addr().String()
-	addrParts := strings.SplitN(addr, ":", 2)
-	return strconv.Atoi(addrParts[1])
+	return 0, fmt.Errorf("unable to allocate tcp port")
+
 }

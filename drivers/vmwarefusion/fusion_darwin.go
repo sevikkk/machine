@@ -29,10 +29,9 @@ import (
 )
 
 const (
-	B2D_USER        = "docker"
-	B2D_PASS        = "tcuser"
-	dockerConfigDir = "/var/lib/boot2docker"
-	isoFilename     = "boot2docker-1.5.0-GH747.iso"
+	B2D_USER    = "docker"
+	B2D_PASS    = "tcuser"
+	isoFilename = "boot2docker-1.6.0-vmw.iso"
 )
 
 // Driver for VMware Fusion
@@ -54,12 +53,6 @@ type Driver struct {
 	SSHPort        int
 
 	storePath string
-}
-
-type CreateFlags struct {
-	Boot2DockerURL *string
-	Memory         *int
-	DiskSize       *int
 }
 
 func init() {
@@ -230,7 +223,7 @@ func (d *Driver) Create() error {
 		//}
 
 		// see https://github.com/boot2docker/boot2docker/pull/747
-		isoURL := "https://github.com/cloudnativeapps/boot2docker/releases/download/1.5.0-GH747/boot2docker-1.5.0-GH747.iso"
+		isoURL := "https://github.com/cloudnativeapps/boot2docker/releases/download/v1.6.0-vmw/boot2docker-1.6.0-vmw.iso"
 
 		if _, err := os.Stat(commonIsoPath); os.IsNotExist(err) {
 			log.Infof("Downloading boot2docker.iso to %s...", commonIsoPath)
@@ -285,9 +278,8 @@ func (d *Driver) Create() error {
 		}
 	}
 
-	if err := d.Start(); err != nil {
-		return err
-	}
+	log.Infof("Starting %s...", d.MachineName)
+	vmrun("start", d.vmxPath(), "nogui")
 
 	var ip string
 
@@ -327,12 +319,51 @@ func (d *Driver) Create() error {
 	// Expand tar file.
 	vmrun("-gu", B2D_USER, "-gp", B2D_PASS, "runScriptInGuest", d.vmxPath(), "/bin/sh", "sudo /bin/mv /home/docker/userdata.tar /var/lib/boot2docker/userdata.tar && sudo tar xf /var/lib/boot2docker/userdata.tar -C /home/docker/ > /var/log/userdata.log 2>&1 && sudo chown -R docker:staff /home/docker")
 
+	// Enable Shared Folders
+	vmrun("-gu", B2D_USER, "-gp", B2D_PASS, "enableSharedFolders", d.vmxPath())
+
+	var shareName, shareDir string // TODO configurable at some point
+	switch runtime.GOOS {
+	case "darwin":
+		shareName = "Users"
+		shareDir = "/Users"
+		// TODO "linux" and "windows"
+	}
+
+	if shareDir != "" {
+		if _, err := os.Stat(shareDir); err != nil && !os.IsNotExist(err) {
+			return err
+		} else if !os.IsNotExist(err) {
+			// add shared folder, create mountpoint and mount it.
+			vmrun("-gu", B2D_USER, "-gp", B2D_PASS, "addSharedFolder", d.vmxPath(), shareName, shareDir)
+			vmrun("-gu", B2D_USER, "-gp", B2D_PASS, "runScriptInGuest", d.vmxPath(), "/bin/sh", "sudo mkdir "+shareDir+" && sudo mount -t vmhgfs .host:/"+shareName+" "+shareDir)
+		}
+	}
 	return nil
 }
 
 func (d *Driver) Start() error {
 	log.Infof("Starting %s...", d.MachineName)
 	vmrun("start", d.vmxPath(), "nogui")
+
+	log.Debugf("Mounting Shared Folders...")
+	var shareName, shareDir string // TODO configurable at some point
+	switch runtime.GOOS {
+	case "darwin":
+		shareName = "Users"
+		shareDir = "/Users"
+		// TODO "linux" and "windows"
+	}
+
+	if shareDir != "" {
+		if _, err := os.Stat(shareDir); err != nil && !os.IsNotExist(err) {
+			return err
+		} else if !os.IsNotExist(err) {
+			// create mountpoint and mount shared folder
+			vmrun("-gu", B2D_USER, "-gp", B2D_PASS, "runScriptInGuest", d.vmxPath(), "/bin/sh", "sudo mkdir "+shareDir+" && sudo mount -t vmhgfs .host:/"+shareName+" "+shareDir)
+		}
+	}
+
 	return nil
 }
 

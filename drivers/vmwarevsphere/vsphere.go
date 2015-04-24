@@ -29,10 +29,9 @@ import (
 
 const (
 	DATASTORE_DIR      = "boot2docker-iso"
-	isoFilename        = "boot2docker-1.5.0-GH747.iso"
+	isoFilename        = "boot2docker-1.6.0-vmw.iso"
 	B2D_ISO_NAME       = isoFilename
 	DEFAULT_CPU_NUMBER = 2
-	dockerConfigDir    = "/var/lib/boot2docker"
 	B2D_USER           = "docker"
 	B2D_PASS           = "tcuser"
 )
@@ -62,21 +61,6 @@ type Driver struct {
 	SwarmDiscovery string
 
 	storePath string
-}
-
-type CreateFlags struct {
-	CPU            *int
-	Memory         *int
-	DiskSize       *int
-	Boot2DockerURL *string
-	IP             *string
-	Username       *string
-	Password       *string
-	Network        *string
-	Datastore      *string
-	Datacenter     *string
-	Pool           *string
-	HostIP         *string
 }
 
 func init() {
@@ -318,7 +302,7 @@ func (d *Driver) Create() error {
 		//}
 
 		// see https://github.com/boot2docker/boot2docker/pull/747
-		isoURL := "https://github.com/cloudnativeapps/boot2docker/releases/download/1.5.0-GH747/boot2docker-1.5.0-GH747.iso"
+		isoURL := "https://github.com/cloudnativeapps/boot2docker/releases/download/v1.6.0-vmw/boot2docker-1.6.0-vmw.iso"
 
 		if _, err := os.Stat(commonIsoPath); os.IsNotExist(err) {
 			log.Infof("Downloading boot2docker.iso to %s...", commonIsoPath)

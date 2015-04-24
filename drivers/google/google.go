@@ -12,10 +12,6 @@ import (
 	"github.com/docker/machine/state"
 )
 
-const (
-	dockerConfigDir = "/etc/docker"
-)
-
 // Driver is a struct compatible with the docker.hosts.drivers.Driver interface.
 type Driver struct {
 	MachineName    string
@@ -33,15 +29,6 @@ type Driver struct {
 	SwarmMaster    bool
 	SwarmHost      string
 	SwarmDiscovery string
-}
-
-// CreateFlags are the command line flags used to create a driver.
-type CreateFlags struct {
-	Zone        *string
-	MachineType *string
-	Project     *string
-	Scopes      *string
-	DiskSize    *int
 }
 
 func init() {
